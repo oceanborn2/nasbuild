@@ -1,0 +1,20 @@
+
+
+== Appendices
+
+=== Power calculations
+
+* https://www.bequiet.com/en/psucalculator[psucalculator]
+
+=== Reference
+
+* https://www.amazon.fr/gp/product/B0B5JXH42M/ref=ppx_yo_dt_b_d_asin_title_o06?ie=UTF8&psc=1[book on PC building and maintenance (US 220-1101 & 220-1102) I used to refresh myself on  modern pc parts and standards.]
+
+
+=== Unsorted/reconcile
+
+* network cards (x4 directly)
+
+* nvme ssds  (2 x4 lanes on nvme M2 adapter)
+
+* wifi/BT cards hooked to an nvme M2 adapter.

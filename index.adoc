@@ -1,0 +1,8 @@
+include::vars.adoc[]
+
+include::hardware.adoc[]
+
+include::software.adoc[]
+
+include::appendices.adoc[]
+

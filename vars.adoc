@@ -1,0 +1,10 @@
+:author: Pascal Munerot
+:email: pascal.munerot@gmail.com
+
+:doctitle: My NAS build
+:subtitle: software and hardware notes
+:toclevels: 4
+:toc:
+:numbered:
+
+:imagesdir: pics

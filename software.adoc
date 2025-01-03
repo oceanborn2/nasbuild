@@ -1,0 +1,18 @@
+include::vars.adoc[]
+
+== Software : applications and services
+
+TODO:: Proxmox, unraid, self-managed linux.
+
+
+
+
+:imagesdir: pics
+
+image::balena1.png[]
+
+image::balena2.png[]
+
+image::balena3.png[]
+
+image::balena4.png[]
