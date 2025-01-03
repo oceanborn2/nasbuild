@@ -35,12 +35,15 @@ usermod -g pascal -Gsudo -d /home/pascal
 bash -c "$(wget -qLO - https://github.com/community-scripts/ProxmoxVE/raw/main/misc/post-pve-install.sh)"
 ----
 
+
+== Install basic tools, xfce, mtp ...
+
 .Install essential tools including git
 [source, bash]
 ----
 apt update
 apt upgrade
-apt install git
+apt install git tig
 apt install sudo
 ----
 
@@ -63,6 +66,15 @@ apt install xfce4*
 ----
 
 
+.mtp tools
+[source, bash]
+----
+apt install mtp-tools
+----
+
+
+== Create git repo under /etc
+
 .Create /etc git repo
 [source, bash]
 ----
@@ -72,12 +84,81 @@ git add -A
 git commit -m "initial...
 reboot
 
-apt install bat fzh zsh zsh-doc fish micro fd-find
+apt install bat fzh zsh zsh-doc fish micro fd-find ripgrep
 ----
+
+
+== Browser plugins
 
 .Manual install of bitwarden, pcloud and raindrop browser plugins
 
 
+== Recover previous LVM
+
+.recover old lvm volume data
+[source, bash]
+----
+vgscan --devices /dev/sdb3 # sdb3 is the ssd lvm volume
+# Found volume group "pveold" using metadata type lvm2
+
+vgdisplay --devices /dev/sdb3 
+#  --- Volume group ---
+#  VG Name               pveold
+#  System ID             
+#  Format                lvm2
+#  Metadata Areas        1
+#  Metadata Sequence No  36
+#  VG Access             read/write
+#  VG Status             resizable
+#  MAX LV                0
+#  Cur LV                7
+#  Open LV               0
+#  Max PV                0
+#  Cur PV                1
+#  Act PV                1
+#  VG Size               237.47 GiB
+#  PE Size               4.00 MiB
+#  Total PE              60793
+#  Alloc PE / Size       56696 / <221.47 GiB
+#  Free  PE / Size       4097 / 16.00 GiB
+#  VG UUID               u2jRjW-gAJE-cQV9-ef1D-yMWq-v85o-Efy5VG
+
+lvdisplay --devices /dev/sdb3 
+# --- Logical volume ---
+#  LV Name                data
+#  VG Name                pveold
+# LV UUID                q1WKGI-BY58-wore-KHNk-ql8D-qNJY-nEayLw
+#  LV Write Access        read/write
+#  LV Creation host, time proxmox, 2024-05-20 16:10:16 +0200
+#  LV Pool metadata       data_tmeta
+#  LV Pool data           data_tdata
+#  LV Status              NOT available
+#  LV Size                <141.23 GiB
+#  Current LE             36154
+#  Segments               1
+#  Allocation             inherit
+#  Read ahead sectors     auto
+
+vgchange -ay pveold
+#  7 logical volume(s) in volume group "pveold" now active
+
+
+ls -l /dev/pveold/
+# lrwxrwxrwx 1 root root 7 Jan  3 15:38 root -> ../dm-6
+# lrwxrwxrwx 1 root root 7 Jan  3 15:38 swap -> ../dm-5
+# lrwxrwxrwx 1 root root 8 Jan  3 15:38 vm-100-disk-0 -> ../dm-11
+# lrwxrwxrwx 1 root root 8 Jan  3 15:38 vm-101-disk-0 -> ../dm-12
+# lrwxrwxrwx 1 root root 8 Jan  3 15:38 vm-103-disk-0 -> ../dm-13
+# lrwxrwxrwx 1 root root 8 Jan  3 15:38 vm-104-disk-0 -> ../dm-14
+
+
+lvdisplay --
+mount /dev/pveold/root /mnt/sdb1/
+
+
+----
+
+== Clone configs repository
 
 .Clone configs repository
 [source, bash]
@@ -85,6 +166,186 @@ apt install bat fzh zsh zsh-doc fish micro fd-find
 git clone https://github.com/oceanborn2/configs.git
 ----
 
+.Manually restored
 
+* /etc/fstab: to account for all the disks
+
+* /etc/hosts
+
+* run /etc/network/netfw-vmbr0-vmbr1.sh to enables some nat rules - see https://
+
+
+== Create pool and attach members
+
+.Pool creation
+
+. go to console for creating the pool (could be done from command line)
+
+. add the two lvm storage as members (lvm, lvm-thin)
+
+
+.Mounting previous xfs data partition as a local directory in proxmox
+[source, bash]
+----
+fdisk -l
+blkid /dev/nvme0n1 # disk
+# /dev/nvme0n1: PTUUID="e5f4c386-3f21-4ba5-9ab1-690a6d9bace3" PTTYPE="gpt"
+
+blkid /dev/nvme0n1p1  # partition
+#/dev/nvme0n1p1: UUID="9df65e23-73a1-4ba5-8831-f4b364a9a91b" BLOCK_SIZE="512" TYPE="xfs" PARTUUID="4ce0bc6c-6649-41a5-b325-e70ce26e4cd4"
+
+lsblk
+root@nas:/mnt/datavol/dump# lsblk
+# NAME                            MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+# sdb                               8:16   0 238.5G  0 disk 
+# ├─sdb1                            8:17   0  1007K  0 part 
+# ├─sdb2                            8:18   0     1G  0 part /boot/efi
+# └─sdb3                            8:19   0 237.5G  0 part 
+#   ├─pveold-swap                 252:5    0     8G  0 lvm  
+#   ├─pveold-root                 252:6    0  69.4G  0 lvm  /mnt/sdb1
+#   ├─pveold-data_tmeta           252:7    0   1.4G  0 lvm  
+#   │ └─pveold-data-tpool         252:9    0 141.2G  0 lvm  
+#   │   ├─pveold-data             252:10   0 141.2G  1 lvm  
+#   │   ├─pveold-vm--100--disk--0 252:11   0     4M  0 lvm  
+#   │   ├─pveold-vm--101--disk--0 252:12   0     2G  0 lvm  /media/pascal/a03d8d7b-3494-4dbb-8f08-85839662e1a7
+#   │   ├─pveold-vm--103--disk--0 252:13   0     4G  0 lvm  /media/pascal/7e4a8586-c215-4299-a6bf-0a34511937fc
+#   │   └─pveold-vm--104--disk--0 252:14   0     6G  0 lvm  /media/pascal/c274d015-8389-4998-870f-e4f0cac85a5c
+#   └─pveold-data_tdata           252:8    0 141.2G  0 lvm  
+#      └─pveold-data-tpool         252:9    0 141.2G  0 lvm  
+#      ├─pveold-data             252:10   0 141.2G  1 lvm  
+#      ├─pveold-vm--100--disk--0 252:11   0     4M  0 lvm  
+#      ├─pveold-vm--101--disk--0 252:12   0     2G  0 lvm  /media/pascal/a03d8d7b-3494-4dbb-8f08-85839662e1a7
+#      ├─pveold-vm--103--disk--0 252:13   0     4G  0 lvm  /media/pascal/7e4a8586-c215-4299-a6bf-0a34511937fc
+#      └─pveold-vm--104--disk--0 252:14   0     6G  0 lvm  /media/pascal/c274d015-8389-4998-870f-e4f0cac85a5c
+# nvme1n1                         259:0    0   1.8T  0 disk 
+# ├─nvme1n1p1                     259:3    0  1007K  0 part 
+# ├─nvme1n1p2                     259:4    0     1G  0 part /boot/efi
+# └─nvme1n1p3                     259:5    0   1.8T  0 part 
+#   ├─pve-swap                    252:0    0     8G  0 lvm  [SWAP]
+#   ├─pve-root                    252:1    0    96G  0 lvm  /
+#   ├─pve-data_tmeta              252:2    0  15.9G  0 lvm  
+#   │ └─pve-data                  252:4    0   1.7T  0 lvm  
+#   └─pve-data_tdata              252:3    0   1.7T  0 lvm  
+#     └─pve-data                  252:4    0   1.7T  0 lvm  
+# nvme0n1                         259:1    0   3.6T  0 disk 
+# └─nvme0n1p1                     259:2    0   3.6T  0 part /mnt/datavol
+#                                                           /media/root/9df65e23-73a1-4ba5-8831-f4b364a9a91b
+
+# give a proper label 'data' to the 4TB data volume
+mkdir /mnt/datavol
+tune2fs  -Ldata /dev/nvme0n1p1 
+# modify etc/fstab accordingly
+----
+
+.Declare the new volume to pve storage volumes
+
+image::storage-volumes-datacenter.png[]
+
+INFO::Can be also achieved via pvesm command
+
+image::storage-volumes-poolmember.png[]
+
+[source, bash]
+----
+pvesm status
+# Name             Type     Status           Total            Used       Available        %
+# local             dir     active        98497780         6189556        87258676    6.28%
+# local-lvm     lvmthin     active      1793077248               0      1793077248    0.00%
+# root@nas:/mnt/datavol# pvesm status
+# Name             Type     Status           Total            Used       Available        %
+# data              dir     active      3905109820       202644636      3702465184    5.19%
+# local             dir     active        98497780         6189064        87259168    6.28%
+# local-lvm     lvmthin     active      1793077248               0      1793077248    0.00%
+----
+
+.Install lxc update scripts in cron
+
+[source, bash]
+----
+bash -c "$(wget -qLO - https://github.com/community-scripts/ProxmoxVE/raw/main/misc/update-lxcs.sh)"
+----
+
+
+.Performance governor script (cpufreq)
+
+[source, bash]
+----
+bash -c "$(wget -qLO - https://github.com/community-scripts/ProxmoxVE/raw/main/misc/scaling-governor.sh)"
+# https://www.kernel.org/doc/html/latest/admin-guide/pm/cpufreq.html#generic-scaling-governors
+----
+
+TODO:: Review in more details
+
+.Install fstrim for ext4 (/local) filesystem
+
+WARNING::It does not register itself into crontab => Run manually 
+
+[source, bash]
+----
+bash -c "$(wget -qLO - https://github.com/community-scripts/ProxmoxVE/raw/main/misc/fstrim.sh)"
+----
+
+== Wake on lan
+
+INFO:: Wake on lan must be allowed also from the BIOS settings on the dedicated interface.
+
+[source, bash]
+----
+apt install wakeonlan # only to work as a client
+# wake on lan mac address is configured from the console already
+----
+
+== Regular kernel cleaning
+
+INFO:: Not in the crontab, run manually
+
+[source, bash]
+----
+bash -c "$(wget -qLO - https://github.com/community-scripts/ProxmoxVE/raw/main/misc/kernel-clean.sh)"
+----
+
+
+
+
+== Restore VMs and containers
+
+
+.Restore the Manjaro VM
+
+INFO:: Currently stored on the old data volume (from vzbackup)
+
+. Go to the list of backups on the data volume 
+
+. Select the oldest backup for Manjaro (.vma.zst): 7.6GB
+
+image::restore-manjaro-backup.png[]
+
+. select the target storage as 'local-lvm' : 2TB volume for vms and containers and OS
+
+. Click on restore
+
+image::manjaro-restore-logs.png[]
+
+.Restore the vaultwarden container
+
+image::vaultwarden-restore-logs.png[]
+
+
+
+.Restore the grist container
+
+
+.Restore the nginx manager proxy
+
+
+.Install netfilter persistent to save netfilter rules
+[source, bash]
+----
+apt install netfilter-persistent
+netfilter-persistent save
+
+apt install faiL2ban # installed but not configured
+
+----
 
 
