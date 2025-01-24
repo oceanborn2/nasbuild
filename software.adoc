@@ -349,3 +349,89 @@ apt install faiL2ban # installed but not configured
 ----
 
 
+.Dismount mapped lvm volumes, then vg group, then lg group
+[source, bash]
+----
+umount /dev/mapper/pveold-  # tab tab
+#pveold-data_tdata        pveold-data_tmeta        pveold-data-tpool        pveold-root              pveold-vm--101--disk--0  pveold-vm--103--disk--0  pveold-vm--104--disk--0
+umount /dev/mapper/pveold-vm--101--disk--0
+umount /dev/mapper/pveold-vm--103--disk--0
+umount /dev/mapper/pveold-vm--105--disk--0
+umount /dev/mapper/pveold-root # or umount /dev/sdb3 but not clean
+
+lvchange -an pveold --devices /dev/sdb3
+
+
+----
+
+
+pveold-vm--101--disk--0  pveold-vm--103--disk--0  pveold-vm--104--disk--0
+root@nas:/home/pascal# umount /dev/mapper/pveold-vm--103--disk--0
+root@nas:/home/pascal# umount /dev/mapper/pveold-vm--104--disk--0
+root@nas:/home/pascal# umount /dev/mapper/pveold-root
+umount: /dev/mapper/pveold-root: not mounted.
+root@nas:/home/pascal#
+
+== Install main database instance and schemas
+
+
+.from LXC (community-scripts)
+
+image::pg0.png[]
+
+image::pg0a.png[]
+
+image::pg0b.png[]
+
+image::pg0c.png[]
+
+image::pg1.png[]
+
+image::pg2.png[]
+
+image::pg3.png[]
+
+image::pg4.png[]
+
+image::pg5.png[]
+
+image::pg6.png[]
+
+image::pg7.png[]
+
+image::pg8.png[]
+
+image::pg9.png[]
+
+image::pg10.png[]
+
+image::pg11.png[]
+
+
+[source, bash]
+----
+apt install postgresql-client-15 # to remove later when having a proper vm with psql and pgadmin working
+----
+
+=== Configure forgejo db
+
+[source, bash]
+----
+su - postgres
+psql
+create role forgejo
+
+
+psql -U postgres -h maindb.pmunerot.net -p 5432 -d postgres -W
+# password will be queried from stdin
+
+
+== Plex media server
+
+
+
+
+----
+
+== Appendices
+
